@@ -1,42 +1,262 @@
-# Welcome to Zammad
+# Zammad Helpdesk Deployment with Docker
 
-Are you juggling countless customer inquiries across multiple channels?
-Struggling to keep your support team on the same page?
-Or spending more time managing your helpdesk than delivering exceptional support to your customers?
+## Overview
 
-Zammad is your Swiss Army knife - a web-based, open-source helpdesk and customer support platform
-packed with features to streamline customer communication across channels like email, chat, telephone and social media.
+This project demonstrates how to deploy the **Zammad** using **Docker** and **Docker Compose**.
 
-## The Software
+Zammad is an open-source helpdesk and ticketing system used to manage customer communication through multiple channels such as email, chat, and web forms.
 
-The Zammad software is and will stay open source. It is licensed under the GNU AGPLv3.
-The source code is [available on GitHub](https://github.com/zammad/zammad) and owned by
-the [Zammad Foundation](https://zammad-foundation.org/), which is independent of commercial
-providers such as Zammad GmbH.
+Using Docker allows Zammad and its required services to run in **isolated containers**, making deployment simple and reproducible.
 
-## The Company - Zammad GmbH
+---
 
-The development of Zammad is carried out by the [amazing team of people](https://zammad.com/en/company)
-at [Zammad GmbH](https://zammad.com/) in collaboration with the community.
-We love to create open source software for you. If you want to ensure the Zammad software
-has a bright and sustainable future, consider becoming a Zammad customer!
+# Architecture
 
-> Are you tired of complex setup, configuration, backup and update tasks? Let us handle this stuff for you! 🚀
->
-> The easiest and often most cost-effective way to operate Zammad is [our cloud service](https://zammad.com/en/pricing).
-> Give it a try with a [free trial instance](https://zammad.com/en/getting-started)!
+Zammad requires several backend services to function properly.
+When deployed with Docker Compose, the system runs multiple containers:
 
-## Getting Started - Documentation
+| Container     | Purpose                                      |
+| ------------- | -------------------------------------------- |
+| nginx         | Web server that exposes the Zammad interface |
+| railsserver   | Zammad backend application                   |
+| websocket     | Real-time updates for the web interface      |
+| scheduler     | Background jobs                              |
+| postgresql    | Database storage                             |
+| redis         | Cache and job queue                          |
+| memcached     | Memory caching                               |
+| elasticsearch | Full text search engine                      |
 
-[Learn more on Zammad’s documentation](https://docs.zammad.org/en/latest/install/docker-compose.html)
+All containers communicate internally through a **Docker network**.
 
-## Upgrading
+```
+Browser
+   │
+   ▼
+Docker Port 8080
+   │
+   ▼
+Nginx Container
+   │
+   ▼
+Rails Application
+   │
+ ┌───────────────┬───────────────┬───────────────┐
+ ▼               ▼               ▼
+PostgreSQL     Redis        Elasticsearch
+(Database)     (Cache)         (Search)
+```
 
-For upgrading instructions, see our [Releases](https://github.com/zammad/zammad-docker-compose/releases).
+---
 
-## Running without Elasticsearch
+# Requirements
 
-Elasticsearch is an optional, but strongly recommended dependency for Zammad. More details can be found in the [documentation](https://docs.zammad.org/en/latest/prerequisites/software.html#elasticsearch-optional). There are however certain scenarios when running without Elasticsearch may be desired, e.g. for very small teams, for teams with limited budget or as a temporary solution for an unplanned Elasticsearch downtime or planned cluster upgrade.
+Before starting, install the following software:
 
-Elasticsearch is enabled by default in the example `docker-compose.yml` file. It is also by default required to run the "zammad-init" command. Disabling Elasticsearch is possible by setting a special environment variable: `ELASTICSEARCH_ENABLED=false` and loading
-the scenario [disable-elasticsearch-service.yml](scenarios/disable-elasticsearch-service.yml).
+* **Docker**
+* **Docker Compose**
+* **Git**
+
+Verify installation:
+
+```bash
+docker --version
+docker compose version
+git --version
+```
+
+---
+
+# Project Setup
+
+## 1 Clone the Zammad Docker Repository
+
+```bash
+git clone https://github.com/zammad/zammad-docker-compose.git
+cd zammad-docker-compose
+```
+
+This repository contains the Docker configuration for running Zammad.
+
+---
+
+## 2 Create Environment Configuration
+
+Copy the default environment file:
+
+```bash
+cp .env.dist .env
+```
+
+Edit the file:
+
+```bash
+nano .env
+```
+
+Configure the PostgreSQL credentials:
+
+```
+POSTGRES_USER=zammad
+POSTGRES_PASS=zammad123
+```
+
+Save the file.
+
+---
+
+# Starting the System
+
+Start all containers in the background:
+
+```bash
+docker compose up -d
+```
+
+Docker will automatically download all required images.
+
+This includes:
+
+* Zammad application image
+* PostgreSQL database
+* Redis
+* Elasticsearch
+* Memcached
+
+---
+
+# Checking Running Containers
+
+To verify that the system is running:
+
+```bash
+docker ps
+```
+
+Example output:
+
+```
+CONTAINER ID   IMAGE                        PORTS
+dbf86fdae152   ghcr.io/zammad/zammad        0.0.0.0:8080->8080/tcp
+40a855e3847e   postgres:17-alpine
+f8cabb3d5f4e   redis:8-alpine
+068b0081a172   elasticsearch
+```
+
+This shows that the containers are active.
+
+---
+
+# Accessing Zammad
+
+Open your browser and navigate to:
+
+```
+http://localhost:8080
+```
+
+You will see the **Zammad setup wizard**.
+
+Complete the initial configuration:
+
+1. Create the administrator account
+2. Configure organization
+3. Skip email setup (optional)
+4. Skip channels
+
+After this, the helpdesk dashboard will appear.
+
+---
+
+# Useful Docker Commands
+
+### View running containers
+
+```bash
+docker ps
+```
+
+### View logs
+
+```bash
+docker compose logs
+```
+
+### Follow logs in real time
+
+```bash
+docker compose logs -f
+```
+
+### Stop the system
+
+```bash
+docker compose down
+```
+
+### Restart the system
+
+```bash
+docker compose restart
+```
+
+### Start containers again
+
+```bash
+docker compose up -d
+```
+
+---
+
+# Data Persistence
+
+Docker volumes are used to store persistent data.
+
+Important volumes include:
+
+| Volume             | Purpose          |
+| ------------------ | ---------------- |
+| postgresql-data    | Database data    |
+| redis-data         | Redis storage    |
+| elasticsearch-data | Search index     |
+| zammad-storage     | File attachments |
+| zammad-backup      | System backups   |
+
+This ensures that data is not lost when containers restart.
+
+---
+
+# Advantages of Using Docker for Zammad
+
+* Easy deployment
+* Consistent environment
+* Isolation of services
+* Simple scaling
+* Easy backup and restore
+* Portable setup
+
+Docker allows Zammad to run identically across different systems such as:
+
+* Linux servers
+* Windows with Docker Desktop
+* Cloud environments
+* Development machines
+
+---
+
+# Conclusion
+
+Using Docker Compose simplifies the deployment of Zammad by automatically managing all required services in separate containers.
+
+This setup provides a reliable and scalable environment for running a professional helpdesk system.
+
+---
+
+If you want, I can also show you how to make your README **look much more professional on GitHub** with:
+
+* badges
+* architecture diagram
+* Docker container diagram
+* screenshots
+* setup sections like a real open-source project
+
+It will make your repository look **like a professional DevOps project**.
