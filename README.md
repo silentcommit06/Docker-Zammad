@@ -1,3 +1,6 @@
+
+<img width="1536" height="1024" alt="ChatGPT Image Mar 9, 2026, 02_53_30 PM" src="https://github.com/user-attachments/assets/59d43897-fe1c-411d-a121-24956be83b7d" />
+
 # Zammad Docker Installation Guide
 ### Deploy Zammad Helpdesk with Docker Compose
 
